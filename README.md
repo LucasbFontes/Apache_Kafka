@@ -16,6 +16,7 @@ To be able to complete this project I've used the following:
 * 2 Datanode with 2gb RAM
 * [Apache Kafka](https://kafka.apache.org/) - 2-11-1.1.0
 * [Streamsets](https://streamsets.com/)
+* [Apache Zookeeper](https://zookeeper.apache.org/)
 
 ## First..a little theory
 
@@ -33,7 +34,7 @@ Ok..enough with the theory, let's go to the project.
 
 ## Project
 
-The goal in this project it's to transfer the data from a .csv file and put it on my hadoop cluster. I'm going to show 2 projects: first I'm going to show how I move the data from one point to other; and in the second project I'll do the same  but cleaning the data before stores it on Hadoop.
+The goal in this project it's to transfer the data from a .csv file and put it on my hadoop cluster.
 
 The first step it's to open streamsets. This tool works with Drag and Drop which means that very little programming knowledge is needed, we just have to select the blocks and then drop it on the interface.
 
@@ -42,5 +43,63 @@ By the end of this configuration I had the following(the error in the image it's
 
 ![workflow pipe](https://user-images.githubusercontent.com/68716835/104848064-03779380-58c2-11eb-8d61-58136b9e1fc4.PNG)
 
+Now I have to connect with the Kafka Producer, to do that I had to install a library on streamsets that helps me deal with kafka. So I went to 'Packet Manager'(the gift image) wrote 'kafka' and installed the library. After the install I search for 'Kafka Producer' and linked it as Directory 1 destination. 
+
+![kafka producer](https://user-images.githubusercontent.com/68716835/104851569-84d82180-58d4-11eb-86d4-e2b5a4da7050.PNG)
+
+
+Now I have to initialize kafka on the Node Master, to do that I have first to initialize Zookeeper - to give a shallow explanation, Zookeeper is another Apache system and in this case helps to manage all the others Apache systems(since almost all the Apache system have an animal as its image you can think of zookeeper as the manager of the zoo, which it's true in real life).  
+
+The following command initialize zookeeper:
+
+```shell
+nohup bin/zookeeper-server-start.sh config/zookeeper.properties > zookeeper.log &
+```
+
+* nohup: it's to run zookeeper in the background
+* bin/zookeeper-server-start.sh config/zookeeper.properties : initialize zookeeper with specific properties
+* '>' zookeeper.log: uses this file as the logfiles 
+* &: to run in the background
+
+Now I can initialize kafka:
+
+```shell
+nohup bin/kafka-server-start.sh config/server.properties > kafka.log &
+```
+The logic is the same as zookeeper so there's no need to explain it. The next step it's to create the kafka topic(that will receive the data):
+
+```shell
+bin/kafka-topics.sh --create --topic sensores --zookeeper localhost:2181 --replication-factor 1 --partitions 1
+```
+* bin/kafka.sh : starts kafka
+* -- create --topic: creates topic and name it (sensores)
+* --zookeeper: pass zookeepers location
+* --replication-factor: the number of replications
+* --partitions: number of partitions
+
+After running this code, we can back to streamsets and configure the producer: changing the name of the topic to the one created before. Now, just hit validate on streamsets and then run
+
+![validate successful](https://user-images.githubusercontent.com/68716835/104851587-b224cf80-58d4-11eb-99e0-b7a2ad887986.PNG)
+
+
+Now back to the terminal..it's time to put the raw json file into the directory specified in the Directory 1. Once this is made I can back to streamsets and see if everything is all right. Every time a file is stored in the /data directory it'll be consumed for the Kafka Producer that will awaits to be sent to the consumer. Below the image showing the workflow consuming the data. 
+
+![workflow funcionando](https://user-images.githubusercontent.com/68716835/104851774-c74e2e00-58d5-11eb-9279-6777d80ba039.PNG)
+
+Since the streamset shows that we could be able to withdraw the data from its source. It's time to see with the consumer could be able to comunicate with the producer:
+
+```shell
+bin/kafka-console-consumer.sh --zookeeper localhost:2181 --topic sensores --from-beginning
+```
+* bin/kafka-console-consumer.sh : starts kafka consumer
+* --zookeeper: shows zookeeper location
+* --topic: indicates the topic where the data are stored
+* --from-beginning: reads them from the beginning
+
+![arquivos consumidos](https://user-images.githubusercontent.com/68716835/104852208-4ba1b080-58d8-11eb-8e43-13748ee381e5.PNG)
+
+Now that we saw that the data are consumed, we will create the next part of the pipeline. I'm going to build it in other streamset file to preserve reliability. If one block of the pipeline stops work it'll not affect the others. 
+
+The Kafka Consumer 
 
 
