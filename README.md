@@ -100,6 +100,18 @@ bin/kafka-console-consumer.sh --zookeeper localhost:2181 --topic sensores --from
 
 Now that we saw that the data are consumed, we will create the next part of the pipeline. I'm going to build it in other streamset file to preserve reliability. If one block of the pipeline stops work it'll not affect the others. 
 
-The Kafka Consumer 
+The Kafka Consumer will be configured in the same way as the Kafka Producer. But for the Hadoop block it'll be necessary to download the Hadoop library on packet manager. To configure hadoop I had to add where are the configuration files in my cluster,  in this case : /opt/hadoop/etc/hadoop, and on Hadoop FS URI use the default name on core-site.xml. 
+
+But wait ... something is missing. I still have to clear the data! Therefore, between Kafka Consumer and HDFS Bloco, I will add the deduplication file. This file will help to delete duplicate lines from the file, as it has 2 outputs one for the hadoop block and the other for thrash. The top point is where clean data comes out and the other is where duplicate data comes out.
+
+To configure the deduplicator just indicates which fields you want to be analyzed and then run the dataflow:
+
+![removendoduplicadas](https://user-images.githubusercontent.com/68716835/104853326-d71e4000-58de-11eb-9be6-a453e4da642b.PNG)
+
+![adiiconando deduplicador](https://user-images.githubusercontent.com/68716835/104853344-fddc7680-58de-11eb-8f2e-49202beab21b.PNG)
+
+Once the streamset finishes the running process the data will appear on the HDFS directory specified earlier, and then the data will be ready to be consumed by the data scientists
+
+![conteúdo no datalake](https://user-images.githubusercontent.com/68716835/104853366-22385300-58df-11eb-9a71-4c1973ea13fe.PNG)
 
 
